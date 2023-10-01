@@ -1,0 +1,51 @@
+conda activate metagenomics
+
+curl -O ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR258/004/SRR2589044/SRR2589044_1.fastq.gz
+# # Esto tarda. convendrá hacer un subsample de los fastq.gz
+# primero download scp javelar@dna.lavis.unam.mx:/mnt/Timina/lmorales/Public/ymez/data/fastq/raw/*5645* .
+# luego upload dándole click
+
+
+gunzip *fastq.gz 
+head YMX005645_R1.fastq
+#Selecciona la información de la última lectura del archivo
+
+fastqc *.fastq*
+
+# Ver HTMLs
+unzip *.zip # no funciona porque unzip no acepta listas, necesita de a uno por uno
+
+$ for filename in *.zip
+> do
+> unzip $filename
+> done
+
+trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  YMX005645_R1.trimmed.fastq YMX005645_R1un.trimmed.fastq YMX005645_R2.trimmed.fastq YMX005645_R2un.trimmed.fastq SLIDINGWINDOW:4:20
+
+trimmomatic SE -threads 4 YMX005645_R1.fastq  YMX005645_R1.fastq.trimmed.fastq.gz SLIDINGWINDOW:4:20 ILLUMINACLIP:SRR_adapters.fa # si fuera single end #Otra vez, esto tarda.
+
+
+trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  \
+              SRR_1056_1.trimmed.fastq SRR_1056_1un.trimmed.fastq \
+              SRR_1056_2.trimmed.fastq SRR_1056_2un.trimmed.fastq \
+               SLIDINGWINDOW:4:20 # ILLUMINACLIP:SRR_adapters.fa tendría que buscar/pedir el archivo de adaptadores de bgi
+
+
+$ for infile in *_1.fastq.gz
+> do
+>   base=$(basename ${infile} _1.fastq.gz)
+>   trimmomatic PE ${infile} ${base}_2.fastq.gz \
+>                ${base}_1.trim.fastq.gz ${base}_1un.trim.fastq.gz \
+>                ${base}_2.trim.fastq.gz ${base}_2un.trim.fastq.gz \
+>                SLIDINGWINDOW:4:20 MINLEN:25 
+> done
+
+mkdir ref_genome
+mv SACE_S288C_v1_allChr.fasta ref_genome/
+cd ref_genome/
+
+less SACE_S288C_v1_allChr.fasta
+wc SACE_S288C_v1_allChr.fasta
+cd ..
+
+mkdir -p results/sam results/bam results/bcf results/vcf
