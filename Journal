@@ -23,7 +23,7 @@ $ for filename in *.zip
 trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  YMX005645_R1.trimmed.fastq YMX005645_R1un.trimmed.fastq YMX005645_R2.trimmed.fastq YMX005645_R2un.trimmed.fastq SLIDINGWINDOW:4:20
 
 trimmomatic SE -threads 4 YMX005645_R1.fastq  YMX005645_R1.fastq.trimmed.fastq.gz SLIDINGWINDOW:4:20 ILLUMINACLIP:SRR_adapters.fa # si fuera single end #Otra vez, esto tarda.
-
+trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  YMX005645_R1.trimmed.fastq YMX005645_R1un.trimmed.fastq YMX005645_R2.trimmed.fastq YMX005645_R2un.trimmed.fastq SLIDINGWINDOW:4:20 MINLEN:100 LEADING:5 TRAILING:5
 
 trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  \
               SRR_1056_1.trimmed.fastq SRR_1056_1un.trimmed.fastq \
@@ -70,4 +70,4 @@ samtools tview results/bam/output.sorted.bam ref_genome/SACE_S288C_v1_allChr.fas
 
 ### generar multi-vcf file
 
-
+head -n268 /home/alumno1/dc_workshop_YEAST/data/trimmed_fastq_small/YMX005645_R
