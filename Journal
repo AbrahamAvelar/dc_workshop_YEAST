@@ -49,3 +49,25 @@ wc SACE_S288C_v1_allChr.fasta
 cd ..
 
 mkdir -p results/sam results/bam results/bcf results/vcf
+
+bwa index ref_genome/SACE_S288C_v1_allChr.fasta 
+bwa mem ref_genome/SACE_S288C_v1_allChr.fasta untrimmed_fastq/YMX005645_R1.trimmed.fastq untrimmed_fastq/YMX005645_R2.trimmed.fastq > output.sam
+
+# hacer más pequeño el sam para que no de errores. Noté que el error que daba cambiaba la línea en la cuál daba el error. En algún blog vi que la compu podría ser limitante.
+head -n20 results/sam/output.sam > output_header.sam 
+shuf -n 100000 results/sam/output.sam | head -n 100000 > output_random.sam # 10k rápido. 100k unos segundos.
+cat output_random.sam >> output_header.sam
+
+samtools view -S -b output_header.sam > results/bam/output.bam #
+samtools sort -o results/bam/output.sorted.bam results/bam/output.bam 
+samtools flagstat results/bam/output.sorted.bam
+bcftools mpileup -O b -o results/bcf/output_raw.bcf -f ref_genome/SACE_S288C_v1_allChr.fasta results/bam/output.sorted.bam # 100k tarda un poco
+
+bcftools call --ploidy 2 -m -v -o results/vcf/output_variants.vcf results/bcf/output_raw.bcf  #Detect SNVs
+vcfutils.pl varFilter results/vcf/output_variants.vcf  > results/vcf/output_final_variants.vcf # Filter and report the SNV variants in variant calling format (VCF
+samtools index results/bam/output.sorted.bam
+samtools tview results/bam/output.sorted.bam ref_genome/SACE_S288C_v1_allChr.fasta
+
+
+
+
