@@ -40,9 +40,9 @@ do
 >                SLIDINGWINDOW:4:20 MINLEN:25 
 > done
 
-mkdir ref_genome
-mv SACE_S288C_v1_allChr.fasta ref_genome/
-cd ref_genome/
+mkdir _genome
+mv SACE_S288C_v1_allChr.fasta _genome/
+cd _genome/
 
 less SACE_S288C_v1_allChr.fasta
 wc SACE_S288C_v1_allChr.fasta
@@ -50,8 +50,8 @@ cd ..
 
 mkdir -p results/sam results/bam results/bcf results/vcf
 
-bwa index ref_genome/SACE_S288C_v1_allChr.fasta 
-bwa mem ref_genome/SACE_S288C_v1_allChr.fasta untrimmed_fastq/YMX005645_R1.trimmed.fastq untrimmed_fastq/YMX005645_R2.trimmed.fastq > output.sam
+bwa index _genome/SACE_S288C_v1_allChr.fasta 
+bwa mem _genome/SACE_S288C_v1_allChr.fasta untrimmed_fastq/YMX005645_R1.trimmed.fastq untrimmed_fastq/YMX005645_R2.trimmed.fastq > output.sam
 
 # hacer más pequeño el sam para que no de errores. Noté que el error que daba cambiaba la línea en la cuál daba el error. En algún blog vi que la compu podría ser limitante.
 head -n20 results/sam/output.sam > output_header.sam 
@@ -61,13 +61,83 @@ cat output_random.sam >> output_header.sam
 samtools view -S -b output_header.sam > results/bam/output.bam #
 samtools sort -o results/bam/output.sorted.bam results/bam/output.bam 
 samtools flagstat results/bam/output.sorted.bam
-bcftools mpileup -O b -o results/bcf/output_raw.bcf -f ref_genome/SACE_S288C_v1_allChr.fasta results/bam/output.sorted.bam # 100k tarda un poco
+bcftools mpileup -O b -o results/bcf/output_raw.bcf -f _genome/SACE_S288C_v1_allChr.fasta results/bam/output.sorted.bam # 100k tarda un poco
 
 bcftools call --ploidy 2 -m -v -o results/vcf/output_variants.vcf results/bcf/output_raw.bcf  #Detect SNVs
 vcfutils.pl varFilter results/vcf/output_variants.vcf  > results/vcf/output_final_variants.vcf # Filter and report the SNV variants in variant calling format (VCF
 samtools index results/bam/output.sorted.bam
-samtools tview results/bam/output.sorted.bam ref_genome/SACE_S288C_v1_allChr.fasta
+samtools tview results/bam/output.sorted.bam _genome/SACE_S288C_v1_allChr.fasta
 
 ### generar multi-vcf file
+cd /mnt/Timina/lmorales/Public/ymez/tmp/06_genotyping/trees/dc_WorkshopYeast/results/vcf
+module load gatk/4.2.3.0cd
+IndexFeatuile -I YMX507B01_R_final_variants.vcf
+gatk GenotypeGVCFs -V YMX507B01_R_final_variants.vcf -R /mnt/Timina/lmorales/Public/ymez/data/ref/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta -O YMX507B01_R_final_variants.g.vcf
+
 
 head -n268 /home/alumno1/dc_workshop_YEAST/data/trimmed_fastq_small/YMX005645_R
+
+gatk HaplotypeCaller -R /mnt/Timina/lmorales/Public/ymez/data/ref/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta -I bam/YMX507B01_R.aligned.sorted.bam -O output2.vcf -L sample_list.txt
+nano sample_list.txt
+YMX507B01_R.aligned.sorted.bam
+
+
+bwa mem -M -t10 ${ref_dir}/SACE_S288C_v1_allChr.fasta ${fq_dir}/YMX507B01_R1_clean.fastq.gz ${fq_dir}/YMX507B01_R2_clean
+.fastq.gz | samtools view -hbS - | samtools sort -o ${out_dir}/YMX507B01_SACE.bam -
+# picard montón de filtros
+samtools index ${out_dir}/YMX507B01_SACE.rmdup.addgp.bam
+
+gatk --java-options "-Xmx16g" HaplotypeCaller -R ${ref_dir}/SACE_S288C_v1_allChr.fasta -I ${FILE1} -O ${tmp_dir}/05_vcal
+ling/$(basename ${FILE1} .rmdup.addgp.bam).g.vcf --annotation ClippingRankSumTest --annotation DepthPerSampleHC --annota
+tion StrandBiasBySample --annotation AlleleFraction --annotation AS_FisherStrand --annotation ChromosomeCounts  --emit-r
+ef-confidence GVCF
+
+gatk --java-options "-Xmx16g" GenotypeGVCFs -R ${ref_dir}/SACE_S288C_v1_allChr.fasta -V ${tmp_dir}/05_vcalling/$(basenam
+e ${FILE1} .rmdup.addgp.bam).g.vcf  -O ${tmp_dir}/06_genotyping/$(basename ${FILE1} .rmdup.addgp.bam).gt.g.vcf --annotat
+ion ClippingRankSumTest --annotation DepthPerSampleHC --annotation StrandBiasBySample --annotation AlleleFraction --anno
+tation AS_FisherStrand --annotation ChromosomeCounts
+
+vcftools --vcf /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX507B01_SACE.g.vcf --chr SACE_S288C_v1_chr_01 --chr SA
+CE_S288C_v1_chr_02 --chr SACE_S288C_v1_chr_03 --chr SACE_S288C_v1_chr_04 --chr SACE_S288C_v1_chr_05 --chr SACE_S288C_v1_
+chr_06 --chr SACE_S288C_v1_chr_07 --chr SACE_S288C_v1_chr_08 --chr SACE_S288C_v1_chr_09 --chr SACE_S288C_v1_chr_10 --chr
+ SACE_S288C_v1_chr_11 --chr SACE_S288C_v1_chr_12 --chr SACE_S288C_v1_chr_13 --chr SACE_S288C_v1_chr_14 --chr SACE_S288C_
+v1_chr_15 --chr SACE_S288C_v1_chr_16 --recode --recode-INFO-all --out /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/Y
+MX507B01_SACE.SNP_onlychr_SACE.g
+
+mv /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX507B01_SACE.SNP_onlychr_SACE.g.recode.vcf /mnt/Timina/lmorales/Pu
+blic/ymez/tmp/05_vcalling/YMX507B01_SACE.SNP_onlychr_SACE.g.vcf
+
+bgzip /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX507B01_SACE.SNP_onlychr_SACE.g.vcf
+tabix /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX507B01_SACE.SNP_onlychr_SACE.g.vcf.gz
+
+
+gatk --java-options "-Xmx16g" SelectVariants -R ${ref_dir}/SACE_S288C_v1_allChr.fasta -V ${tmp_dir}/06_genotyping/$(base
+name ${FILE1} .rmdup.addgp.bam).gt.g.vcf --select-type-to-include SNP -O ${tmp_dir}/06_genotyping/$(basename ${FILE1} .r
+mdup.addgp.bam).gt.SNP.g.vcf
+
+
+gatk --java-options "-Xmx16g" CombineGVCFs -R ${ref_dir}/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta 
+  --variant /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX506G06_SACE.SNP_onlychr_SACE.g.vcf.gz  
+  --variant /mnt/Timina/lmorales/Public/ymez/tmp/05_vcalling/YMX508C01_SACE.SNP_onlychr_SACE.g.vcf.gz -O ${out_dir}/Matrix_SNPs_SACE_from_SACE117.vcf
+
+#  We genotype the multisample vcf file
+gatk --java-options "-Xmx16g" GenotypeGVCFs -R ${ref_dir}/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta -V ${out_dir}/M
+atrix_SNPs_SACE_from_SACE117.vcf -O ${out_dir}/Matrix_SNPs_SACE_from_SACE117_gt.vcf
+
+# We filter low-quality SNPs
+gatk --java-options "-Xmx16g" VariantFiltration -R ${ref_dir}/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta -V ${out_di
+r}/Matrix_SNPs_SACE_from_SACE117_gt_onlySNPs.vcf -O ${out_dir}/Matrix_SNPs_SACE_from_SACE117_gt_onlySNPs_filtered.vcf --
+filter-name "SNP_QD_filters" --filter-expression "QD<2.0" --filter-name "SNP_MQ_filters" --filter-expression "MQ<40.0" -
+-filter-name "SNP_FS_filters" --filter-expression "FS>60.0" --filter-name "SNP_SOR_filters" --filter-expression "SOR>3.0
+" --filter-name "SNP_MQRankSum_filters" --filter-expression "MQRankSum<-12.5" --filter-name "SNP_ReadPosRankSum_filters"
+ --filter-expression "ReadPosRankSum<-8.0"
+
+# We discard low-quality SNPs
+vcftools --vcf ${out_dir}/Matrix_SNPs_SACE_from_SACE117_gt_onlySNPs_filtered.vcf --remove-filtered-all --recode --out ${
+out_dir}/Matrix_SNPs_SACE_from_SACE117_gt_onlySNPs_filtered
+
+
+
+(base) [javelar@compute-00-10 06_genotyping]$ python3.7 genotyping_and_filtering.py -r /mnt/Timina/lmorales/Public/ymez
+/data/metadata/ref_only_SACE.txt -s /mnt/Timina/lmorales/Public/ymez/data/metadata/SampleSheet_SACE24_dcWorkshopYeast.c
+sv -m .1
