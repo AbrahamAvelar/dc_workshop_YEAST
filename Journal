@@ -88,7 +88,7 @@ bwa mem -M -t10 ${ref_dir}/SACE_S288C_v1_allChr.fasta ${fq_dir}/YMX507B01_R1_cle
 samtools index ${out_dir}/YMX507B01_SACE.rmdup.addgp.bam
 
 gatk --java-options "-Xmx16g" HaplotypeCaller -R ${ref_dir}/SACE_S288C_v1_allChr.fasta -I ${FILE1} -O ${tmp_dir}/05_vcal
-ling/$(basename ${FILE1} .rmdup.addgp.bam).g.vcf --annotation ClippingRankSumTest --annotation DepthPerSampleHC --annota
+ling/$(cd basename ${FILE1} .rmdup.addgp.bam).g.vcf --annotation ClippingRankSumTest --annotation DepthPerSampleHC --annota
 tion StrandBiasBySample --annotation AlleleFraction --annotation AS_FisherStrand --annotation ChromosomeCounts  --emit-r
 ef-confidence GVCF
 
@@ -138,6 +138,10 @@ out_dir}/Matrix_SNPs_SACE_from_SACE117_gt_onlySNPs_filtered
 
 
 
-(base) [javelar@compute-00-10 06_genotyping]$ python3.7 genotyping_and_filtering.py -r /mnt/Timina/lmorales/Public/ymez
-/data/metadata/ref_only_SACE.txt -s /mnt/Timina/lmorales/Public/ymez/data/metadata/SampleSheet_SACE24_dcWorkshopYeast.c
-sv -m .1
+
+gatk --java-options "-Xmx16g" HaplotypeCaller -R /mnt/Timina/lmorales/Public/ymez/data/ref/SACE_S288C_v1/fasta/SACE_S288C_v1_allChr.fasta -I /mnt/Timina/lmorales/Public/ymez/data/bam/YMX507B01_SACE.rmdup.addgp.bam  -O output.g.vcf.gz --annotation ClippingRankSumTest --annotation DepthPerSampleHC --annotation StrandBiasBySample --annotation AlleleFraction --annotation AS_FisherStrand --annotation ChromosomeCounts --emit-ref-confidence GVCF
+
+
+python3.7 genotyping_and_filtering.py -r /mnt/Timina/lmorales/Public/ymez/data/metadata/ref_only_SACE.txt -s /mnt/Timina/lmorales/Public/ymez/data/metadata/SampleSheet_SACE24_dcWorkshopYeast.csv -m .1
+
+
