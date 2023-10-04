@@ -1,0 +1,109 @@
+# Ya tiene que estar:
+
+dc_workshop_YEAST/data/raw/YMX005645_R1.fastq.gz #  AHORITA se llama: /home/alumno1/dc_workshop_YEAST/data_1/untrimmed_fastq
+dc_workshop_YEAST/data/raw/YMX005645_R2.fastq.gz # ESTOY INTENTANDO QUE NO SEAN LOS ARCHIVOS COMPLETOS PORQUE ESTÁN PESADOS y que sean al menos 5 muestras 
+  
+dc_workshop_YEAST/data/ref_genome/SACE_S288C_v1_allChr.fasta
+
+dc_workshop_YEAST/multvcf/MATRIX_24SACE.vcf
+dc_workshop_YEAST/multvcf/vcf2phylip.py
+
+
+# Metadata
+{Link GSheets}
+
+# Connecting to the server 
+{Link usuarios pswds}
+> conda activate metagenomics
+
+# Raw reads are in compressed FastQ format
+> cd /home/alumno1/dc_workshop_YEAST/data/raw_fastq  #  AHORITA se llama: /home/alumno1/dc_workshop_YEAST/data_1/untrimmed_fastq
+> ls
+
+output:
+YMX005645_R1.fastq.gz  # ESTOY INTENTANDO QUE NO SEAN LOS ARCHIVOS COMPLETOS PORQUE ESTÁN PESADOS
+YMX005645_R2.fastq.gz
+
+> gunzip *fastq.gz 
+> ls 
+output:
+YMX005645_R1.fastq
+YMX005645_R2.fastq
+
+> head YMX005645_R1.fastq
+
+# FastQC permite visualizar la calidad de las secuencias
+
+> fastqc YMX005645_R1.fastq
+
+Ordenar y explorar las salidas
+mkdir ../
+mkdir ../fastqc
+
+mv *.html ../fastqc
+mv *.zip ../fastqc
+
+
+
+# Trimmomatic elimina secuencias de baja calidad
+> trimmomatic PE -threads 4 YMX005645_R1.fastq YMX005645_R2.fastq  YMX005645_R1.trimmed.fastq YMX005645_R1un.trimmed.fastq YMX005645_R2.trimmed.fastq YMX005645_R2un.trimmed.fastq SLIDINGWINDOW:4:20 MINLEN:100 LEADING:5 TRAILING:5
+
+mkdir ../untrimmed
+mkdir ../trimmed
+
+mv *un.trimmed.fastq ../untrimmed
+mv *trimmed.fastq ../trimmed
+
+
+# bwa mem permite alinear las lecturas limpias al genoma de referencia
+> mkdir -p results/sam results/bam results/bcf results/vcf
+
+> bwa index ref_genome/SACE_S288C_v1_allChr.fasta  #indexar el genoma
+> bwa mem ref_genome/SACE_S288C_v1_allChr.fasta untrimmed_fastq/YMX005645_R1.trimmed.fastq untrimmed_fastq/YMX005645_R2.trimmed.fastq > output.sam #alinear y dar output.sam como resultado
+
+##### hacer más pequeño el sam para que no de errores. Noté que el error que daba cambiaba la línea en la cuál daba el error. En algún blog vi que la compu podría ser limitante.
+> head -n20 results/sam/output.sam > output_header.sam 
+> shuf -n 100000 results/sam/output.sam | head -n 100000 > output_random.sam # 10k rápido. 100k unos segundos. ###quedarse con 1 cromosoma?  SACE_S288C_v1_chr_15 #asegurarse que no pueden salir las primeras 20 líneas
+> cat output_random.sam >> output_header.sam
+
+# Llamado de variantes
+samtools view -S -b output_header.sam > results/bam/output.bam #convertir a bam
+samtools sort -o results/bam/output.sorted.bam results/bam/output.bam  # ordenar el bam
+samtools flagstat results/bam/output.sorted.bam 
+bcftools mpileup -O b -o results/bcf/output_raw.bcf -f _genome/SACE_S288C_v1_allChr.fasta results/bam/output.sorted.bam # 100k tarda un poco 
+
+bcftools call --ploidy 2 -m -v -o results/vcf/output_variants.vcf results/bcf/output_raw.bcf  #Detect SNVs
+vcfutils.pl varFilter results/vcf/output_variants.vcf  > results/vcf/output_final_variants.vcf # Filter and report the SNV variants in variant calling format (VCF
+
+# Visualizar alineamiento
+samtools index results/bam/output.sorted.bam
+samtools tview results/bam/output.sorted.bam _genome/SACE_S288C_v1_allChr.fasta
+
+https://datacarpentry.org/wrangling-genomics/instructor/04-variant_calling.html#viewing-with-igv
+
+
+#Filogenia
+#convertir multivcf a formato phylip
+¿module load python37/? # utiliza las librerías: 
+import argparse
+import gzip
+import random
+import sys
+from pathlib import Path
+> python vcf2phylip.py -i dc_workshop_YEAST/multvcf/MATRIX_24SACE.vcf 
+
+# así lo suelo correr. con que salga un árbol de Matrix_24SACE.vcf estaría bien
+module load gcc/5.1.0 python37/3.7.0 vcftools/0.1.14 htslib/1.9 bcftools/1.9 ph]yml/3.1 jmodeltest/2.1.10 raxml/8.2.12-avx2-pthreads 
+> raxmlHPC-PTHREADS-AVX2 -f a -x 12345 -p 12345 -N 100  -T 20 -m GTRGAMMA -s dc_workshop_YEAST/multvcf/MATRIX_24SACE.vcf.min4.phy -n Phylogeny_Yeast.tree 
+
+
+# Visualizar filogenia 
+scp / download
+https://microreact.org/
+
+
+
+
+
+
+
