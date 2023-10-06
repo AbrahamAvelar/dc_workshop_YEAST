@@ -3,7 +3,7 @@
 dc_workshop_YEAST/data/raw/YMX005645_R1.fastq.gz #  AHORITA se llama: /home/alumno1/dc_workshop_YEAST/data_1/untrimmed_fastq
 dc_workshop_YEAST/data/raw/YMX005645_R2.fastq.gz # ESTOY INTENTANDO QUE NO SEAN LOS ARCHIVOS COMPLETOS PORQUE ESTÁN PESADOS y que sean al menos 5 muestras 
   
-dc_workshop_YEAST/data/ref_genome/SACE_S288C_v1_allChr.fasta
+dc_workshop_YEAST/data/ref_genome/SACE_S288C_v1_allChr.fasta ###este
 
 dc_workshop_YEAST/multvcf/MATRIX_24SACE.vcf
 dc_workshop_YEAST/multvcf/vcf2phylip.py
