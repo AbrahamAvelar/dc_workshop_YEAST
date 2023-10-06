@@ -1,3 +1,129 @@
+# moverse al directorio ‘home’ de cada usuario
+cd  
+
+# moverse al directorio del curso
+cd dc_workshop_YEAST/
+
+#activar el ambiente de conda
+conda activate metagenomics
+
+### Raw Reads
+cd  ~/dc_Workshop_YEAST/data/raw
+
+#See the first 8 lines of the file
+head –n8 YMX005645_R1.sub.fastq
+
+#analizar calidad de un archivo fastq
+fastqc YMX005645_R1.fastq
+
+-Abrir .html
+-Abrir .zip
+unzip *.zip
+
+#analizar la calidad de todos los archivos fastq
+fastqc *.fastq
+
+#ordenar los resultados
+mkdir –p  ~/dc_workshop_YEAST/results/fastqc_untrimmed_reads
+mv *zip   ~/dc_workshop_YEAST/results/fastqc_untrimmed_reads
+mv *html  ~/dc_workshop_YEAST/results/fastqc_untrimmed_reads
+
+cd  ~/dc_workshop_YEAST/results/fastqc_untrimmed_reads
+Unzip *.zip
+
+
+# descomprimir archivo por archivo en un loop forfor filename in *.zip
+do
+unzip $filename
+done
+
+# ver el resumen 
+less YMX005645_R1.sub_fastqc/summary.txt
+
+# guardar todos los resúmenes en un archivo de texto
+mkdir ~/dc_workshop_YEAST/docs
+cat */summary.txt > ~/dc_workshop_YEAST/docs/fastqc_summaries.txt
+
+# buscar cómo fue la calidad por base
+cd  ~/dc_workshop_YEAST/docs
+grep  “Per base sequence quality” fastqc_summaries.txt
+
+# buscar todo lo que falló “FAIL” o dio ‘WARN’
+
+#### TRIMMING
+cd ~/dc_workshop_YEAST/data/raw
+
+trimmomatic PE -threads 4 YMX005645_R1.sub.fastq YMX005645_R2.sub.fastq \ 
+YMX005645_R1.trimmed.fastq YMX005645_R1untrimmed.fastq \ 
+YMX005645_R2.trimmed.fastq YMX005645_R2untrimmed.fastq \ 
+SLIDINGWINDOW:4:20 MINLEN:100 LEADING:5 TRAILING:5 
+
+#Mover resultados a su directorio
+mkdir untrimed
+mv data/*untrimed*
+mkdir trimed
+mv data/*trimed*
+
+### MAP
+# primero exploremos al genoma de referencia en formato fasta
+cd ~/dc_workshop_YEAST/data/ref_genoma
+less SACE_S288C_v1_allChr.fasta
+
+#¿Cuántos cromosomas tiene esta referencia?
+
+#indexar la referencia
+bwa index data/ref_genome/SACE_S288C_v1_allChr.fasta
+ls 
+
+bwa mem data/ref_genome/SACE_S288C_v1_allChr.fasta data/trimmed/YMX005645_R1.trimmed.fastq data/trimmed/YMX005645_R2.trimmed.fastq > results/sam/YMX005645.aligned.sam
+
+less results/sam/YMX005645.aligned.sam
+
+#### LLamado de variantes
+# Como son archivos grandes, recortaremos las primeras 500k líneas para este taller
+head –n500000 results/sam/YMX005645.aligned.sam > results/sam/output_header.sam 
+
+# Convertir en bam
+samtools view -S -b results/sam/output_header.sam > results/bam/output.bam #convert to bam
+
+# Ordenar el bam
+samtools sort -o results/bam/output.sorted.bam results/bam/output.bam  # sort el bam
+
+# Mostrar estadísticas
+samtools flagstat results/bam/output.sorted.bam 
+
+# calcular la cobertura y guardar bcf
+bcftools mpileup -O b -o results/bcf/output_raw.bcf -f data/ref_genome/SACE_S288C_v1_allChr.fasta results/bam/output.sorted.bam 
+
+# detectar SNVs
+bcftools call --ploidy 2 -m -v -o results/vcf/output_variants.vcf results/bcf/output_raw.bcf
+
+# Filtrar variantes de baja calidad y reportar un .vcf
+vcfutils.pl varFilter results/vcf/output_variants.vcf  > results/vcf/output_final_variants.vcf
+
+less results/vcf/output_final_variants.vcf
+
+
+#### Visualizar alineamiento:
+#En línea de comandos
+samtools index results/bam/output.sorted.bam
+samtools tview results/bam/output.sorted.bam data/ref_genome/SACE_S288C_v1_allChr.fasta
+
+
+
+
+#### Filogenia
+cd ~/dc_workshop_YEAST/data/multvcf/
+less  MATRIX_24SACE.vcf
+vcf2phylip.py -i MATRIX_24SACE.vcf 
+raxmlHPC-PTHREADS-AVX2 -f a -x 12345 -p 12345 -N 100  -T 20 -m GTRGAMMA -s MATRIX_24SACE.min4.phy -n Phylogeny_Yeast.tree 
+
+
+
+
+
+
+
 # Ya tiene que estar:
 
 dc_workshop_YEAST/data/raw/YMX005645_R1.fastq.gz #  AHORITA se llama: /home/alumno1/dc_workshop_YEAST/data_1/untrimmed_fastq
